@@ -1242,7 +1242,7 @@
                 if (!heatmap) return;
 
                 heatmap.setMap(null);
-                disposeObject(id);
+                this.disposeObject(id);
             }
         }
         
