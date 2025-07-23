@@ -77,7 +77,7 @@
     }
 
     [JSInvokable]
-    public async Task OnMarkerDrag(Guid markerId, LatLngLiteral position)
+    public async Task OnMarkerDrag(Guid markerId, LatLngAltitudeLiteral position)
     {
         if (_mapComponents.TryGetValue(markerId, out var markerComponent))
         {

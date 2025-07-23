@@ -69,7 +69,7 @@ public partial class MarkerComponent : IAsyncDisposable, IMarker
     /// This event is fired when the user stops moving the marker.
     /// </summary>
     [Parameter, JsonIgnore]
-    public EventCallback<LatLngLiteral> OnMove { get; set; }
+    public EventCallback<LatLngAltitudeLiteral> OnMove { get; set; }
 
     /// <summary>
     /// If true, the AdvancedMarkerElement will be clickable and trigger the gmp-click event, and will be interactive for accessibility purposes (e.g. allowing keyboard navigation via arrow keys).
@@ -114,7 +114,7 @@ public partial class MarkerComponent : IAsyncDisposable, IMarker
         await OnClick.InvokeAsync();
     }
 
-    internal async Task MarkerDragged(LatLngLiteral position)
+    internal async Task MarkerDragged(LatLngAltitudeLiteral position)
     {
         await OnMove.InvokeAsync(position);
     }
