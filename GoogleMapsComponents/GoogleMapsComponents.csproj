@@ -5,10 +5,11 @@
 		<SccProvider>SAK</SccProvider>
 		<SccAuxPath>SAK</SccAuxPath>
 		<SccLocalPath>SAK</SccLocalPath>
+		<Configurations>Debug;Release;TestingData</Configurations>
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+		<TargetFrameworks>net9.0</TargetFrameworks>
 		<IsPackable>true</IsPackable>
 		
 		<LangVersion>latest</LangVersion>
@@ -38,6 +39,11 @@
 		<DebugSymbols>true</DebugSymbols>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='TestingData|AnyCPU'">
+	  <DebugType>full</DebugType>
+	  <DebugSymbols>true</DebugSymbols>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<!-- .js/.css files will be referenced via <script>/<link> tags; other content files will just be included in the app's 'dist' directory without any tags referencing them -->
 		<EmbeddedResource Include="wwwroot\**\*.js" LogicalName="blazor:js:%(RecursiveDir)%(Filename)%(Extension)" />
@@ -62,7 +68,7 @@
 		<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.*" Condition="'$(TargetFramework)' == 'net9.0'" />
 		<PackageReference Include="Microsoft.JSInterop" Version="8.0.*" Condition="'$(TargetFramework)' == 'net8.0'" />
 		<PackageReference Include="Microsoft.JSInterop" Version="9.0.*" Condition="'$(TargetFramework)' == 'net9.0'" />
-		<PackageReference Include="System.Text.Json" Version="8.0.*" Condition="'$(TargetFramework)' == 'net8.0'" />
+		<PackageReference Include="System.Text.Json" Version="9.0.7" Condition="'$(TargetFramework)' == 'net8.0'" />
 		<PackageReference Include="System.Text.Json" Version="9.0.*" Condition="'$(TargetFramework)' == 'net9.0'" />
 
 		<PackageReference Include="OneOf" Version="3.0.271" />
