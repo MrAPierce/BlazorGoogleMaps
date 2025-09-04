@@ -29,6 +29,9 @@
     let mapObjects = {};
     let controlParents = {};
     let polygonClickListeners = new Map();
+    // Store zoom/bounds listeners so we don’t attach multiple times
+    const mapBoundsListeners = {};
+
     const dateFormat = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
 
 
@@ -40,6 +43,35 @@
         }
         mapObjects[uuid] = obj;
     }
+
+    function refreshMarkersInBounds(mapId) {
+        const map = mapObjects[mapId];
+        if (!map) return;
+
+        const bounds = map.getBounds();
+        if (!bounds) return;
+
+        for (const id in mapObjects) {
+            const marker = mapObjects[id];
+            if (!(marker instanceof google.maps.marker.AdvancedMarkerElement)) continue;
+
+            const position = marker.position;
+            const visible = position && bounds.contains(position);
+            marker.map = visible ? map : null;
+        }
+    }
+
+    function ensureBoundsListener(mapId) {
+        const map = mapObjects[mapId];
+        if (!map) return;
+
+        if (!mapBoundsListeners[mapId]) {
+            mapBoundsListeners[mapId] = map.addListener("bounds_changed", () => {
+                refreshMarkersInBounds(mapId);
+            });
+        }
+    }
+
     
     //Strip circular dependencies, map object and functions
     //https://stackoverflow.com/questions/11616630/how-can-i-print-a-circular-structure-in-a-json-like-format
@@ -1009,8 +1041,15 @@
                         collisionBehavior: collisionBehaviorMapping[collisionBehavior],
                     });
 
+
+
                     if (clickChanged) setupClickListener(existingMarker, gmpClickable);
                     if (dragChanged) setupDragListener(existingMarker, gmpDraggable);
+
+                    ensureBoundsListener(mapId);
+                    refreshMarkersInBounds(mapId);
+
+
                     return;
                 }
 
@@ -1039,6 +1078,10 @@
                 setupDragListener(advancedMarkerElement, gmpDraggable);
 
                 addMapObject(id, advancedMarkerElement);
+
+                ensureBoundsListener(mapId);
+                refreshMarkersInBounds(mapId);
+
             },
             disposeAdvancedMarkerComponent: function (id) {
                 const existingMarker = mapObjects[id];
