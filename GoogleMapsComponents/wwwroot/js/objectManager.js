@@ -31,6 +31,8 @@
     let polygonClickListeners = new Map();
     // Store zoom/bounds listeners so we don’t attach multiple times
     const mapBoundsListeners = {};
+    const mapZoomListeners = {};
+    let markerZoomLevels = {};
 
     const dateFormat = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
 
@@ -44,22 +46,82 @@
         mapObjects[uuid] = obj;
     }
 
-    function refreshMarkersInBounds(mapId) {
+    function refreshMarkers(mapId) {
         const map = mapObjects[mapId];
         if (!map) return;
 
         const bounds = map.getBounds();
         if (!bounds) return;
 
+        const zoom = map.getZoom();
+        const zoomBuckets = markerZoomLevels[mapId] || {};
+
         for (const id in mapObjects) {
             const marker = mapObjects[id];
             if (!(marker instanceof google.maps.marker.AdvancedMarkerElement)) continue;
 
             const position = marker.position;
-            const visible = position && bounds.contains(position);
-            marker.map = visible ? map : null;
+            if (!position) continue;
+
+            // Bounds check
+            const inBounds = bounds.contains(position);
+
+            // Zoom check (default to true if no zoom restriction)
+            let zoomVisible = true;
+            for (const rangeKey in zoomBuckets) {
+                const [minZoom, maxZoom] = rangeKey.split('-').map(Number);
+                if (zoomBuckets[rangeKey].includes(id)) {
+                    zoomVisible = zoom >= minZoom && zoom <= maxZoom;
+                    break; // found the range for this marker
+                }
+            }
+
+            // Marker is visible only if both conditions are met
+            marker.map = inBounds && zoomVisible ? map : null;
         }
     }
+
+    function refreshMarkersOptimized(mapId) {
+        const map = mapObjects[mapId];
+        if (!map) return;
+
+        const bounds = map.getBounds();
+        if (!bounds) return;
+
+        const zoom = map.getZoom();
+        const zoomBuckets = markerZoomLevels[mapId] || {};
+
+        const handledMarkers = new Set();
+
+        // --- First, handle markers in zoom buckets ---
+        for (const rangeKey in zoomBuckets) {
+            const [minZoom, maxZoom] = rangeKey.split('-').map(Number);
+            const zoomVisible = zoom >= minZoom && zoom <= maxZoom;
+
+            for (const markerId of zoomBuckets[rangeKey]) {
+                const marker = mapObjects[markerId];
+                if (!(marker instanceof google.maps.marker.AdvancedMarkerElement)) continue;
+
+                // Show only if in bounds and within zoom
+                marker.map = zoomVisible && bounds.contains(marker.position) ? map : null;
+                handledMarkers.add(markerId);
+            }
+        }
+
+        // --- Then handle markers not in any zoom bucket (always zoom-visible) ---
+        for (const id in mapObjects) {
+            if (handledMarkers.has(id)) continue; // already processed
+
+            const marker = mapObjects[id];
+            if (!(marker instanceof google.maps.marker.AdvancedMarkerElement)) continue;
+
+            // Show only if in bounds
+            marker.map = bounds.contains(marker.position) ? map : null;
+        }
+    }
+
+
+
 
     function ensureBoundsListener(mapId) {
         const map = mapObjects[mapId];
@@ -67,9 +129,16 @@
 
         if (!mapBoundsListeners[mapId]) {
             mapBoundsListeners[mapId] = map.addListener("bounds_changed", () => {
-                refreshMarkersInBounds(mapId);
+                refreshMarkers(mapId);
             });
         }
+
+        if (!mapZoomListeners[mapId]) {
+            mapZoomListeners[mapId] = map.addListener("zoom_changed", () => {
+                refreshMarkers(mapId);
+            });
+        }
+
     }
 
     
@@ -999,7 +1068,26 @@
                     collisionBehavior,
                     mapId,
                     componentId,
+                    zoomMin,
+                    zoomMax
                 } = options;
+
+                // --- ensure zoom bucket container exists ---
+                if (!markerZoomLevels[mapId]) {
+                    markerZoomLevels[mapId] = {};
+                }
+
+                // --- add marker to zoom bucket if min/max zoom are defined ---
+                if (zoomMin != null && zoomMax != null) {
+                    const rangeKey = `${zoomMin}-${zoomMax}`;
+                    if (!markerZoomLevels[mapId][rangeKey]) {
+                        markerZoomLevels[mapId][rangeKey] = [];
+                    }
+                    if (!markerZoomLevels[mapId][rangeKey].includes(id)) {
+                        markerZoomLevels[mapId][rangeKey].push(id);
+                    }
+                }
+
 
                 const invokeCallback = (method, ...args) => {
                     callbackRef?.invokeMethodAsync(method, ...args);
@@ -1047,8 +1135,7 @@
                     if (dragChanged) setupDragListener(existingMarker, gmpDraggable);
 
                     ensureBoundsListener(mapId);
-                    refreshMarkersInBounds(mapId);
-
+                    refreshMarkersOptimized(mapId);
 
                     return;
                 }
@@ -1080,7 +1167,7 @@
                 addMapObject(id, advancedMarkerElement);
 
                 ensureBoundsListener(mapId);
-                refreshMarkersInBounds(mapId);
+                refreshMarkersOptimized(mapId);
 
             },
             disposeAdvancedMarkerComponent: function (id) {

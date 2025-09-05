@@ -109,6 +109,13 @@ public partial class MarkerComponent : IAsyncDisposable, IMarker
     [Parameter(CaptureUnmatchedValues = true), JsonIgnore]
     public IReadOnlyDictionary<string, object> Attributes { get; set; } = default!;
 
+
+    [Parameter, JsonIgnore]
+    public int? ZoomMin { get; set; }
+
+    [Parameter, JsonIgnore]
+    public int? ZoomMax { get; set; }
+
     internal async Task MarkerClicked()
     {
         await OnClick.InvokeAsync();
@@ -150,7 +157,9 @@ public partial class MarkerComponent : IAsyncDisposable, IMarker
             GmpClickable = Clickable,
             GmpDraggable = Draggable,
             MapId = MapId ?? MapRef.MapId,
-            ZIndex = ZIndex
+            ZIndex = ZIndex,
+            ZoomMin = ZoomMin,
+            ZoomMax = ZoomMax
         }, MapRef.CallbackRef);
     }
 
@@ -169,7 +178,9 @@ public partial class MarkerComponent : IAsyncDisposable, IMarker
             parameters.DidParameterChange(Title) ||
             parameters.DidParameterChange(Clickable) ||
             parameters.DidParameterChange(MapId) ||
-            parameters.DidParameterChange(Draggable);
+            parameters.DidParameterChange(Draggable) ||
+            parameters.DidParameterChange(ZoomMin) ||
+            parameters.DidParameterChange(ZoomMax);
 
         await base.SetParametersAsync(parameters);
 
@@ -198,5 +209,9 @@ public partial class MarkerComponent : IAsyncDisposable, IMarker
         public bool GmpClickable { get; init; }
         public string? Title { get; init; }
         public int? ZIndex { get; init; }
+
+        public int? ZoomMin { get; init; }
+
+        public int? ZoomMax { get; init; }
     }
 }
