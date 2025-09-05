@@ -1115,12 +1115,21 @@
                     }
                 };
 
+                const map = mapObjects[mapId];
                 const existingMarker = mapObjects[id];
+
+                const content = document.querySelector(`#${componentId}`);
+                if (!content) {
+                    console.warn("Marker tried to render without a target component");
+                    return;
+                }
+
                 if (existingMarker) {
                     const clickChanged = existingMarker.gmpClickable !== gmpClickable;
                     const dragChanged = existingMarker.gmpDraggable !== gmpDraggable;
 
                     Object.assign(existingMarker, {
+                        content,
                         position,
                         title,
                         zIndex,
@@ -1130,23 +1139,16 @@
                     });
 
 
-
                     if (clickChanged) setupClickListener(existingMarker, gmpClickable);
                     if (dragChanged) setupDragListener(existingMarker, gmpDraggable);
 
                     ensureBoundsListener(mapId);
-                    refreshMarkersOptimized(mapId);
+                    //refreshMarkersOptimized(mapId);
 
                     return;
                 }
 
-                const map = mapObjects[mapId];
 
-                const content = document.querySelector(`#${componentId}`);
-                if (!content) {
-                    console.warn("Marker tried to render without a target component");
-                    return;
-                }
 
                 const advancedMarkerElement = new google.maps.marker.AdvancedMarkerElement({
                     map,
